@@ -10,12 +10,12 @@ def list_asset_holders(asset_code,issuer):
     asset = Asset(code=asset_code,issuer=issuer)
     account_list_dict = {}
     accounts = server.accounts().for_asset(asset).limit(200).call()
-    find_cursor_arr = accounts['_links']['prev']['href'].split("&")
     while len(accounts['_embedded']['records']) > 0:
         for r in accounts['_embedded']['records']:
-            temp_account = server.accounts().account_id(r['account_id']).call()
-            index = next((index for (index, d) in enumerate(temp_account['balances']) if d["asset_code"] == asset_code), None)
-            account_list_dict[r['account_id']] = float(temp_account['balances'][index]['balance'])
+            for b in r['balances']:
+                if b['asset_code'] == asset_code:
+                    account_list_dict[r['account_id']] = float(b['balance'])
+                    break;
         find_cursor_arr = accounts['_links']['next']['href'].split("&")
         for n in find_cursor_arr:
             if ("cursor" in n) and len(n) > 7: cursor = n[7:]
