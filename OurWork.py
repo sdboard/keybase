@@ -1,5 +1,5 @@
-from stellar_sdk import Asset
-from stellar_sdk import Server
+from stellar_sdk import Server, Asset, TransactionBuilder, Network, Account, Keypair
+import requests
 import numpy as np
 
 class Action:
@@ -82,3 +82,27 @@ class Action:
             percent_stakes.append(new_row)
         percent_stakes.append(total_arr)
         return percent_stakes
+
+    def make_payment(source_keypair,source_p,destination_p,asset,amount,public=False):
+        if public:
+            server = Server(horizon_url="https://horizon.stellar.org")
+        else:
+            server = Server(horizon_url="https://horizon-testnet.stellar.org")
+
+        source_acc = server.load_account(source_p)
+        base_fee = server.fetch_base_fee()
+
+        transaction = TransactionBuilder(
+            source_account=source_acc,
+            network_passphrase=Network.TESTNET_NETWORK_PASSPHRASE,
+            base_fee=base_fee).append_payment_op(destination_p,
+            amount,
+            asset[0],
+            asset[1]).set_timeout(30).build()
+
+        transaction.sign(source_keypair)
+        response = server.submit_transaction(transaction)
+        try:
+            print(response['successful'])
+        except:
+            print("trasnaction failed")
