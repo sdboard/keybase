@@ -47,9 +47,10 @@ class Action:
                     member_arr.append(data_arr[i][j][0])
         return member_arr
 
-    def get_holders_totals(asset_arr,data_arr,data_dict,members):
+    def get_totals(asset_arr,data_arr,data_dict,members):
         holders_totals = [['account_id']]
         for a in asset_arr: holders_totals[0].append(a[0])
+        holders_totals[0].append("STAKED")
         for member in members:
             staking_tracker = []
             for a in asset_arr: staking_tracker.append(0)
@@ -59,19 +60,25 @@ class Action:
                         staking_tracker[i] = 1
             if np.all(staking_tracker):
                 held_arr = [member]
+                sum = 0
                 for a in asset_arr:
-                    held_arr.append(data_dict[member][a[0]])
+                    amnt = data_dict[member][a[0]]
+                    sum += float(amnt)
+                    held_arr.append(amnt)
+                held_arr.append(sum)
                 holders_totals.append(held_arr)
-        return holders_totals
-
-    def get_stakes(data_arr, holders_totals):
-        percent_stakes = [holders_totals[0]]
         total_arr = ['Total:']
+        sum = 0
         for i in range(len(data_arr)):
             temp_tot = 0
             for j in range(len(holders_totals)-1):
-                temp_tot += float(holders_totals[j+1][i+1])
+                amt = holders_totals[j+1][i+1]
+                temp_tot += float(amt)
+            sum += temp_tot
             total_arr.append(temp_tot)
+        total_arr.append(sum)#
+        holders_totals.append(total_arr)
+        percent_stakes = [holders_totals[0]]
         for i in range(len(holders_totals)-1):
             new_row = []
             for j in range(len(holders_totals[i])):
@@ -80,8 +87,8 @@ class Action:
                 else:
                     new_row.append(str(round(100*float(holders_totals[i+1][j])/total_arr[j],6))+"%")
             percent_stakes.append(new_row)
-        percent_stakes.append(total_arr)
-        return percent_stakes
+        return holders_totals, percent_stakes
+
 
     def make_payment(source_keypair,source_p,destination_p,asset,amount,public=False):
         if public:
@@ -101,6 +108,7 @@ class Action:
             asset[1]).set_timeout(30).build()
 
         transaction.sign(source_keypair)
+
         response = server.submit_transaction(transaction)
         try:
             print(response['successful'])
