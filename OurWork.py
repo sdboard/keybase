@@ -78,14 +78,14 @@ class Action:
             total_arr.append(temp_tot)
         total_arr.append(sum)#
         holders_totals.append(total_arr)
-        percent_stakes = [holders_totals[0]]
-        for i in range(len(holders_totals)-1):
+        percent_stakes = []
+        for i in range(len(holders_totals)):
             new_row = []
             for j in range(len(holders_totals[i])):
-                if j == 0:
-                    new_row.append(holders_totals[i+1][j])
+                if i == 0 or j == 0:
+                    new_row.append(holders_totals[i][j])
                 else:
-                    new_row.append(str(round(100*float(holders_totals[i+1][j])/total_arr[j],6))+"%")
+                    new_row.append(str(round(100*float(holders_totals[i][j])/total_arr[j],6))+"%")
             percent_stakes.append(new_row)
         return holders_totals, percent_stakes
 
