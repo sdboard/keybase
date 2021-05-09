@@ -7,11 +7,15 @@ pd.set_option('display.max_colwidth', None)  # or 199
 
 members = Action.get_members(cur_data)
 
-holders_totals = Action.get_holders_totals(URTH.collectables,cur_data,cur_dict,members)
-
-percent_stakes = Action.get_stakes(cur_data,holders_totals)
+holders_totals, percent_stakes = Action.get_totals(URTH.collectables,cur_data,cur_dict,members)
 
 print(" ")
+print("\t Totals ")
+df = pd.DataFrame(holders_totals)
+print(df)
+print(" ")
+print(" ")
+print("\t Totals by % ")
 df = pd.DataFrame(percent_stakes)
 print(df)
 print(" ")
