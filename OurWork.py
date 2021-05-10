@@ -22,7 +22,7 @@ class Action:
                     else:
                         for b in r['balances']:
                             if b['asset_code'] == asset_arr[i][0]:
-                                if float(b['balance']) > 0:
+                                if float(b['balance']) > 0.0001:
                                     try:
                                         data_dict[r['account_id']][asset_arr[i][0]] = b['balance']
                                     except:
@@ -89,28 +89,47 @@ class Action:
             percent_stakes.append(new_row)
         return holders_totals, percent_stakes
 
+    def get_sendpot(pot,percent_stakes):
+        sendpot = []
+        for i in range(len(percent_stakes)-2):
+            amt = round(pot*float(percent_stakes[i+1][len(percent_stakes[i+1])-1][:-1])/100,6)
+            print(percent_stakes[i+1][0])
+            print(amt)
+            if amt > 0:
+                sendpot.append([percent_stakes[i+1][0],amt])
+        return sendpot
 
-    def make_payment(source_keypair,source_p,destination_p,asset,amount,public=False):
+
+    def send_payments(sendpot,sender,asset,public=False):
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
         else:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
+        with open("text2.txt") as inputfile:
+            for line in inputfile:
+                line = line.split('\n')
+                source_keypair = Keypair.from_secret(line[0])
+        source_p = sender
+        for s in sendpot:
+            destination_p = s[0]
+            amount = str(s[1])
+            print(amount)
+            print(destination_p)
+            source_acc = server.load_account(source_p)
+            base_fee = server.fetch_base_fee()
 
-        source_acc = server.load_account(source_p)
-        base_fee = server.fetch_base_fee()
+            transaction = TransactionBuilder(
+                source_account=source_acc,
+                network_passphrase=Network.TESTNET_NETWORK_PASSPHRASE,
+                base_fee=base_fee).append_payment_op(destination_p,
+                amount,
+                asset[0],
+                asset[1]).set_timeout(30).build()
 
-        transaction = TransactionBuilder(
-            source_account=source_acc,
-            network_passphrase=Network.TESTNET_NETWORK_PASSPHRASE,
-            base_fee=base_fee).append_payment_op(destination_p,
-            amount,
-            asset[0],
-            asset[1]).set_timeout(30).build()
+            transaction.sign(source_keypair)
 
-        transaction.sign(source_keypair)
-
-        response = server.submit_transaction(transaction)
-        try:
-            print(response['successful'])
-        except:
-            print("trasnaction failed")
+            response = server.submit_transaction(transaction)
+            try:
+                print(response['successful'])
+            except:
+                print("transaction failed")
