@@ -22,7 +22,7 @@ class Action:
                     else:
                         for b in r['balances']:
                             if b['asset_code'] == asset_arr[i][0]:
-                                if float(b['balance']) > 0.0001:
+                                if float(b['balance']) > 1:
                                     try:
                                         data_dict[r['account_id']][asset_arr[i][0]] = b['balance']
                                     except:
@@ -95,7 +95,7 @@ class Action:
             amt = round(pot*float(percent_stakes[i+1][len(percent_stakes[i+1])-1][:-1])/100,6)
             print(percent_stakes[i+1][0])
             print(amt)
-            if amt > 0:
+            if amt > 0.0000001:
                 sendpot.append([percent_stakes[i+1][0],amt])
         return sendpot
 
