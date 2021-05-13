@@ -1,12 +1,11 @@
 from stellar_sdk import Server, Asset, TransactionBuilder, Network, Account, Keypair
-import requests
-import time
-import numpy as np
+from time import sleep
+from numpy import all
 
 class Action:
 
-    def get_holders(asset_arr,pub=False,exceptions=[]):
-        if pub:
+    def get_holders(asset_arr,exceptions,public=False):
+        if public:
             server = Server(horizon_url="https://horizon.stellar.org")
         else:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
@@ -23,7 +22,7 @@ class Action:
                     else:
                         for b in r['balances']:
                             if b['asset_code'] == asset_arr[i][0]:
-                                if float(b['balance']) > 1:
+                                if float(b['balance']) >= 1:
                                     try:
                                         data_dict[r['account_id']][asset_arr[i][0]] = b['balance']
                                     except:
@@ -59,7 +58,7 @@ class Action:
                 for account in data_arr[i]:
                     if member in account:
                         staking_tracker[i] = 1
-            if np.all(staking_tracker):
+            if all(staking_tracker):
                 held_arr = [member]
                 sum = 0
                 for a in asset_arr:
@@ -77,9 +76,8 @@ class Action:
                 temp_tot += float(amt)
             sum += temp_tot
             total_arr.append(temp_tot)
-        total_arr.append(sum)#
+        total_arr.append(sum)
         holders_totals.append(total_arr)
-        # print(holders_totals)
         percent_stakes = []
         for i in range(len(holders_totals)):
             new_row = []
@@ -95,40 +93,35 @@ class Action:
         sendpot = []
         for i in range(len(percent_stakes)-2):
             amt = round(pot*float(percent_stakes[i+1][len(percent_stakes[i+1])-1][:-1])/100,6)
-            print(percent_stakes[i+1][0])
-            print(amt)
             if amt > 0.0000001:
                 sendpot.append([percent_stakes[i+1][0],amt])
         return sendpot
 
-
-    def send_payments(sendpot,sender,asset,filename,public=False):
+    def send_payments(sendpot,filename,public=False):
+        receipt = ""
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
             passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
         else:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
             passphrase = Network.TESTNET_NETWORK_PASSPHRASE
+
         with open(filename) as infile:
             for line in infile:
                 line = line.split(" ")
                 if len(line[0]) > 10:
+                    sender = line[0]
                     source_keypair = Keypair.from_secret(line[1][:-1])
-                    print("did this work??")
-                    print(source_keypair.public_key)
-                    time.sleep(2)
-        # with open("rmt.txt") as inputfile:
-        #     for line in inputfile:
-        #         line = line.split('\n')
-                # source_keypair = Keypair.from_secret(line[0])
-        source_p = sender
+                    receipt += " from " +source_keypair.public_key
+                else:
+                    asset = [line[0],line[1][:-1]]
+                sleep(2)
+
         for s in sendpot:
             try:
                 destination_p = s[0]
                 amount = str(s[1])
-                print(amount)
-                print(destination_p)
-                source_acc = server.load_account(source_p)
+                source_acc = server.load_account(sender)
                 base_fee = server.fetch_base_fee()
 
                 transaction = TransactionBuilder(
@@ -142,10 +135,10 @@ class Action:
                 transaction.sign(source_keypair)
 
                 response = server.submit_transaction(transaction)
-                try:
-                    print(response['successful'])
-                except:
-                    print("transaction failed")
+                if response['successful']:
+                    receipt += "\nSuccessfully sent "+str(s[1])+" "+asset[0]+" to "+s[0]
+                else:
+                    print("\n something went wrong...")
             except:
-                print("failed to send " + str(s[1]) + " to " +s[0])
-                # print(response.json())
+                receipt += "\nfailed to send " + str(s[1]) + " to " +s[0]
+        return receipt
