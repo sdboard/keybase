@@ -97,7 +97,7 @@ class Action:
                 sendpot.append([percent_stakes[i+1][0],amt])
         return sendpot
 
-    def send_payments(sendpot,filename,public=False):
+    def send_payments(sendpot,filename,memo,public=False):
         receipt = ""
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
@@ -127,7 +127,9 @@ class Action:
                 transaction = TransactionBuilder(
                     source_account=source_acc,
                     network_passphrase=passphrase,
-                    base_fee=base_fee).append_payment_op(destination_p,
+                    base_fee=base_fee).add_text_memo(
+                    memo).append_payment_op(
+                    destination_p,
                     amount,
                     asset[0],
                     asset[1]).set_timeout(30).build()
