@@ -26,35 +26,34 @@ exceptions =['GDMSN2PQ3EB32LZY5JVACI4H7GUVQ3YUWOM4437IDTVQHHWHYG7CGA5Z',
 #                                                                              #
 server = Server(horizon_url="https://horizon-testnet.stellar.org")
 asset_obj = Asset(code=asset[0],issuer=asset[1])
-accounts = server.accounts().for_asset(asset_obj).limit(200).call()
+accounts_call_builder = (
+    server.accounts().for_asset(asset_obj).limit(15)
+)
 #                                                                              #
-################################################################################
-
-# print(accounts.get("_links").get("next").get("href"))
-
-data_arr = []
-
-while len(accounts['_embedded']['records']) > 0: # if we haven't reached the end of pages
-
-    for r in accounts['_embedded']['records']:
+def holder_amount(page_records,asset,exceptions):
+    acnt_amnt = []
+    for r in page_records:
         if r['account_id'] in exceptions:
             pass
         else:
             for b in r['balances']:
                 if b['asset_code'] == asset[0]:
-                    data_arr.append([r['account_id'],b['balance']])
+                    acnt_amnt.append([r['account_id'],b['balance']])
                     break;
+    return acnt_amnt
+################################################################################
 
-    # Here is my brute-force paging implementaiton ....
-    #
-    # split the href url into components
-    find_cursor_arr = accounts['_links']['next']['href'].split("&")
-    #   equivalently  accounts.get("_links").get("next").get("href").split("&") 
-    for n in find_cursor_arr:
-        # find the "cursor=G...." and record the "G..."
-        if ("cursor" in n) and len(n) > 7: cursor = n[7:]
-    # call again with cursor set to "G...."
-    accounts = server.accounts().for_asset(asset_obj).cursor(cursor).limit(200).call()
+data_arr = []
+
+for h in holder_amount(accounts_call_builder.call()["_embedded"]["records"],asset,exceptions):
+
+    data_arr.append(h)
+
+while page_records := accounts_call_builder.next()["_embedded"]["records"]:
+
+    for h in holder_amount(page_records,asset,exceptions):
+
+        data_arr.append(h)
 
 df = DF(data_arr)
 
