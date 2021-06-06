@@ -16,8 +16,8 @@ set_option('display.max_colwidth', None)
 # asset -> this is the asset we are interested in viewing the total holders of #
 # exceptions -> these are accounts we'd like to exclude for being outliers     #
 #                                                                              #
-asset=['ARST','GB7TAYRUZGE6TVT7NHP5SMIZRNQA6PLM423EYISAOAP3MKYIQMVYP2JO']
-# asset=['BRLT','GB7TAYRUZGE6TVT7NHP5SMIZRNQA6PLM423EYISAOAP3MKYIQMVYP2JO']
+# asset=['ARST','GB7TAYRUZGE6TVT7NHP5SMIZRNQA6PLM423EYISAOAP3MKYIQMVYP2JO']
+asset=['BRLT','GB7TAYRUZGE6TVT7NHP5SMIZRNQA6PLM423EYISAOAP3MKYIQMVYP2JO']
 #                                                                              #
 exceptions =['GDMSN2PQ3EB32LZY5JVACI4H7GUVQ3YUWOM4437IDTVQHHWHYG7CGA5Z',
 'GB34PTUQQPYKN7XPWFZCIP77X5ZAEQEB3IN227EHIZFGLUUDS2Y2JVRW',
