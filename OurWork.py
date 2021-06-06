@@ -89,16 +89,69 @@ class Action:
             percent_stakes.append(new_row)
         return holders_totals, percent_stakes
 
-    def get_sendpot(pot,percent_stakes):
+    def send_payments(percent_stakes,POT,MEMO,public=False):
+        receipt = ""
+        POT = POT[0].split(":")
+        pot = float(POT[0])
+        asset = POT[1]
+        issuer = POT[2]
+        sender = POT[3]
+        source_keypair = Keypair.from_secret(POT[4])
+        receipt += " from " +source_keypair.public_key
+
+        if public:
+            server = Server(horizon_url="https://horizon.stellar.org")
+            passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
+        else:
+            server = Server(horizon_url="https://horizon-testnet.stellar.org")
+            passphrase = Network.TESTNET_NETWORK_PASSPHRASE
+
         sendpot = []
         for i in range(len(percent_stakes)-2):
             amt = round(pot*float(percent_stakes[i+1][len(percent_stakes[i+1])-1][:-1])/100,6)
             if amt > 0.0000001:
                 sendpot.append([percent_stakes[i+1][0],amt])
-        return sendpot
 
-    def send_payments(sendpot,filename,memo,public=False):
-        receipt = ""
+        for s in sendpot:
+            try:
+                destination_p = s[0]
+                amount = str(s[1])
+                source_acc = server.load_account(sender)
+                base_fee = server.fetch_base_fee()
+
+                transaction = TransactionBuilder(
+                    source_account=source_acc,
+                    network_passphrase=passphrase,
+                    base_fee=base_fee).add_text_memo(
+                    MEMO).append_payment_op(
+                    destination_p,
+                    amount,
+                    asset,
+                    issuer).set_timeout(30).build()
+
+                transaction.sign(source_keypair)
+
+                response = server.submit_transaction(transaction)
+                if response['successful']:
+                    receipt += "\nSuccessfully sent "+str(s[1])+" "+asset[0]+" to "+s[0]
+                else:
+                    print("\n something went wrong...")
+            except:
+                receipt += "\nfailed to send " + str(s[1]) + " to " +s[0]
+        return sendpot, receipt
+
+    def get_balance(public_key,public=False):
+        if public:
+            server = Server(horizon_url="https://horizon.stellar.org")
+        else:
+            server = Server(horizon_url="https://horizon-testnet.stellar.org")
+        account = server.accounts().account_id(public_key).call()
+        # print("Ballance for account "+str(pair.public_key()))
+        for b in account['balances']:
+            if b['asset_type'] == 'native':
+                return float(b['balance'])
+
+    def convert_to_USDC(public_key,filename,amount,public=False):
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
             passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
@@ -112,35 +165,29 @@ class Action:
                 if len(line[0]) > 10:
                     sender = line[0]
                     source_keypair = Keypair.from_secret(line[1][:-1])
-                    receipt += " from " +source_keypair.public_key
-                else:
-                    asset = [line[0],line[1][:-1]]
-                sleep(2)
 
-        for s in sendpot:
-            try:
-                destination_p = s[0]
-                amount = str(s[1])
-                source_acc = server.load_account(sender)
-                base_fee = server.fetch_base_fee()
+        # try:
+        destination_p = sender
+        source_acc = server.load_account(sender)
+        base_fee = server.fetch_base_fee()
+        path = [
+        Asset('XLM',None),
+        Asset("USDC",'GC5W3BH2MQRQK2H4A6LP3SXDSAAY2W2W64OWKKVNQIAOVWSAHFDEUSDC')
+        ]
+        transaction = TransactionBuilder(
+            source_account=source_acc,
+            network_passphrase=passphrase,
+            base_fee=base_fee).append_path_payment_strict_send_op(
+            destination_p,"XLM",None,amount,"USDC",
+            'GC5W3BH2MQRQK2H4A6LP3SXDSAAY2W2W64OWKKVNQIAOVWSAHFDEUSDC',
+            '10',path).build()
 
-                transaction = TransactionBuilder(
-                    source_account=source_acc,
-                    network_passphrase=passphrase,
-                    base_fee=base_fee).add_text_memo(
-                    memo).append_payment_op(
-                    destination_p,
-                    amount,
-                    asset[0],
-                    asset[1]).set_timeout(30).build()
+        transaction.sign(source_keypair)
 
-                transaction.sign(source_keypair)
-
-                response = server.submit_transaction(transaction)
-                if response['successful']:
-                    receipt += "\nSuccessfully sent "+str(s[1])+" "+asset[0]+" to "+s[0]
-                else:
-                    print("\n something went wrong...")
-            except:
-                receipt += "\nfailed to send " + str(s[1]) + " to " +s[0]
-        return receipt
+        response = server.submit_transaction(transaction)
+        if response['successful']:
+            print("\nSuccessfully sent "+str(amount)+" XLM to USDC")
+        else:
+            print("\n something went wrong...")
+        # except:
+        #     print("\nconverstion failed")
