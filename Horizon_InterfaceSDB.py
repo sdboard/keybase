@@ -2,7 +2,6 @@ from stellar_sdk import Server, Asset, TransactionBuilder, Network, Account, Key
 from time import sleep
 from numpy import all
 
-from pandas import DataFrame as DF
 class Functions:
 
     def get_percent_holders(asset_arr,exceptions,public=False):
