@@ -22,14 +22,6 @@ class Execute:
 
         MEMO = MEMOS[rand(0,len(MEMOS)-1)]
 
-        if not (MULT or FIXED_NUM):
-            print(True)
-        elif MULT:
-            print("MULTIPLIER")
-        else:
-            print("FIXED_NUM")
-
-
         holders_totals, percent_stakes = Functions.get_percent_holders(COLLECTABLES,EXCEPT,public=PUB)
         Receipt_String = ''
         Receipt_String += "\n\t Totals "
