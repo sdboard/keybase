@@ -23,29 +23,25 @@ class Execute:
         MEMO = MEMOS[rand(0,len(MEMOS)-1)]
 
         holders_totals, percent_stakes = Functions.get_percent_holders(COLLECTABLES,EXCEPT,public=PUB)
-        Receipt_String = ''
-        Receipt_String += "\n\t Totals "
-        df = DF(holders_totals)
-        Receipt_String += df.to_string()
-        Receipt_String += "\n\n\t Totals by % "
-        df = DF(percent_stakes)
-        Receipt_String += df.to_string()
-        Receipt_String += '\n\n\t Sending ..."'
+
         if not (MULT or FIXED_NUM):
             sendpot, receipt = Functions.send_payments(percent_stakes,POT,MEMO,public=PUB)
         elif MULT:
             sendpot, receipt = Functions.send_payments(holders_totals,POT,MEMO,public=PUB,multiplier=MULT)
         else:
             sendpot, receipt = Functions.send_payments(percent_stakes,POT,MEMO,public=PUB,fixed_amount=FIXED_NUM)
-        df = DF(sendpot)
-        Receipt_String += df.to_string()
-        Receipt_String += receipt
 
-        # log transaction data
+        Receipt_String = "\n\t Totals " + DF(holders_totals).to_string()
+        Receipt_String += "\n\n\t Totals by % " + DF(percent_stakes).to_string()
+        Receipt_String += '\n\n\t Sending ..."' + DF(sendpot).to_string() + receipt
+
+        # log transaction data locally
         receipt_file = "Receipts/" + time.strftime("%Y%m%d%H%M")+ ".txt"
         log = open(receipt_file,'w')
         log.write(Receipt_String)
         log.close()
+
+        return Receipt_String
 
 
     def Trade():
