@@ -47,14 +47,6 @@ def increment_time(old_time_str,old_time,filename):
     w_file.writelines(read_lines)
     w_file.close()
 
-def broadcast_results(receipt,time,email):
-    context = ssl.create_default_context()
-    port =  465
-    message = "Subject: "+time+" transactions \n\n"+receipt
-    with smtplib.SMTP_SSL("smtp.gmail.com",port,context=context) as server:
-        server.login("krma.backend@gmail.com",email[2])
-        server.sendmail("krma.backend@gmail.com",[email[0],email[1]],message)
-
 def get_time(next_str):
     now = time.strftime("%Y%m%d%H%M")
     next_time_dt = datetime.strptime(next_str, '%Y%m%d%H%M')
@@ -91,7 +83,6 @@ def mainloop(filename,PUB=False):
             Execute.broadcast_results(receipt,file,NEXT_TIME[0],EMAIL)
 
 if len(sys.argv) == 3:
-    # try:
     filename = sys.argv[1]
     PUB = sys.argv[2]
     if PUB == "True":
@@ -100,7 +91,5 @@ if len(sys.argv) == 3:
         mainloop(filename,PUB=False)
     else:
         float("break")
-    # except:
-    #     print(sys.exc_info())
 else:
     print("Please check the docs \nand review input format.\n")
