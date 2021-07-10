@@ -1,6 +1,7 @@
 from stellar_sdk import Server, Asset, TransactionBuilder, Network, Account, Keypair
 from time import sleep
 from numpy import all
+# from pandas import DataFrame as DF
 
 class Functions:
 
@@ -21,7 +22,7 @@ class Functions:
                         pass
                     else:
                         for b in r['balances']:
-                            if b['asset_code'] == asset_arr[i][0]:
+                            if b['asset_code']==asset_arr[i][0] and b['asset_issuer']==asset_arr[i][1]:
                                 if float(b['balance']) >= 1:
                                     try:
                                         data_dict[r['account_id']][asset_arr[i][0]] = b['balance']
@@ -81,6 +82,8 @@ class Functions:
             summation += holders_totals[i+1][len(holders_totals[i])-1]
         total_arr.append(summation)
         holders_totals.append(total_arr)
+        # df = DF(holders_totals)
+        # print(df)
         percent_stakes = []
         for i in range(len(holders_totals)):
             new_row = []
@@ -101,14 +104,12 @@ class Functions:
         sender = POT[3]
         source_keypair = Keypair.from_secret(POT[4])
         receipt += "\n from " +source_keypair.public_key
-
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
             passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
         else:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
             passphrase = Network.TESTNET_NETWORK_PASSPHRASE
-
         sendpot = []
         for i in range(len(percent_stakes)-2):
             if not (multiplier or fixed_amount):
@@ -119,8 +120,6 @@ class Functions:
                 amt = fixed_amount
             if amt > 0.0000001:
                 sendpot.append([percent_stakes[i+1][0],amt])
-
-
         for s in sendpot:
             try:
                 destination_p = s[0]
@@ -149,18 +148,33 @@ class Functions:
                 receipt += "\nfailed to send " + str(s[1]) + " "+asset+" to " +s[0]
         return sendpot, receipt
 
-    def get_balance(public_key,public=False):
+    def get_balance(public_key,asset=0,public=False):
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
         else:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
         account = server.accounts().account_id(public_key).call()
-        # print("Ballance for account "+str(pair.public_key()))
-        for b in account['balances']:
-            if b['asset_type'] == 'native':
-                return float(b['balance'])
+        if asset:
+            for b in account['balances']:
+                if b['asset_code']==asset[0] and b['asset_issuer']==asset[1]:
+                    balance = float(b['balance'])
+                    break;
+        else:
+            for b in account['balances']:
+                if b['asset_type'] == 'native':
+                    balance = float(b['balance'])
+        return balance
+
+    def get_XLM_price():
+        page = requests.get("https://coinmarketcap.com/currencies/stellar/")
+        text1 = page.text.split("><")
+        for t in text1:
+            if "priceValue" in t:
+                text3 = t.split(">$")[1].split("<")[0]
+        return text3
 
     def convert_to_USDC(public_key,filename,amount,public=False):
+        receipt = ""
         if public:
             server = Server(horizon_url="https://horizon.stellar.org")
             passphrase = Network.PUBLIC_NETWORK_PASSPHRASE
@@ -168,12 +182,8 @@ class Functions:
             server = Server(horizon_url="https://horizon-testnet.stellar.org")
             passphrase = Network.TESTNET_NETWORK_PASSPHRASE
 
-        with open(filename) as infile:
-            for line in infile:
-                line = line.split(" ")
-                if len(line[0]) > 10:
-                    sender = line[0]
-                    source_keypair = Keypair.from_secret(line[1][:-1])
+        sender = hidden[0]
+        source_keypair = Keypair.from_secret(hidden[1])
 
         # try:
         destination_p = sender
@@ -183,20 +193,30 @@ class Functions:
         Asset('XLM',None),
         Asset("USDC",'GC5W3BH2MQRQK2H4A6LP3SXDSAAY2W2W64OWKKVNQIAOVWSAHFDEUSDC')
         ]
-        transaction = TransactionBuilder(
-            source_account=source_acc,
-            network_passphrase=passphrase,
-            base_fee=base_fee).append_path_payment_strict_send_op(
-            destination_p,"XLM",None,amount,"USDC",
-            'GC5W3BH2MQRQK2H4A6LP3SXDSAAY2W2W64OWKKVNQIAOVWSAHFDEUSDC',
-            '10',path).build()
+        c_m_value = float(get_XLM_price())
+        complete = False
+        slip = 0
+        while not complete:
+            min_received = c_m_value * (1-slip)
+            slip +=.25
+            transaction = TransactionBuilder(
+                source_account=source_acc,
+                network_passphrase=passphrase,
+                base_fee=base_fee).append_path_payment_strict_send_op(
+                destination_p,"XLM",None,amount,"USDC",
+                'GC5W3BH2MQRQK2H4A6LP3SXDSAAY2W2W64OWKKVNQIAOVWSAHFDEUSDC',
+                str(min_received),path).build()
 
-        transaction.sign(source_keypair)
-
-        response = server.submit_transaction(transaction)
-        if response['successful']:
-            print("\nSuccessfully sent "+str(amount)+" XLM to USDC")
-        else:
-            print("\n something went wrong...")
-        # except:
-        #     print("\nconverstion failed")
+            transaction.sign(source_keypair)
+            try:
+                response = server.submit_transaction(transaction)
+                if response['successful']:
+                    receipt += "Successfully sent "+str(amount)+" XLM to USDC"
+                    receipt += "\nslippage: "+str((1-slip)*100)+"%"
+                    complete = True
+            except:
+                receipt += "\n Failed at "+str((1-slip)*100)+"% rate"
+            if slip > 5:
+                complete = True
+                receipt += "Aborting attempts at transaction"
+        return receipt
